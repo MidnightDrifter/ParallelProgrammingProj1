@@ -1,7 +1,7 @@
 // convert coordinate file (required by assignment) to a picture
 #include <fstream>   /* ifstream */
 #include <iostream>
-
+/*
 int main( int argc, char ** argv ) 
 {
     char ** data;
@@ -38,3 +38,4 @@ int main( int argc, char ** argv )
     }
     delete [] data;
 }
+*/

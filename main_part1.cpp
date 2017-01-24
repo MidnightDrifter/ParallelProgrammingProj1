@@ -2,6 +2,8 @@
 #include <iostream> /*std::cout*/
 #include <cstdio>    /* sscanf */
 #include "pthread.h" /* thread stuff */
+#include "sched.h"
+#include "semaphore.h"
 
 
 int main( int argc, char ** argv ) 
@@ -16,5 +18,14 @@ int main( int argc, char ** argv )
 
     // input  file argv[1]
     // output file argv[3]
+
+	int rows, cols;
+
+	char* inputFile = "init0";
+
+	sscanf(inputFile, "%i, %i", &rows, &cols);
+
+
+
 
 }
