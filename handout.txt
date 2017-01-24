@@ -1,0 +1,41 @@
+Part 1:
+Implement Game of Life on NxN using N^2 threads - one per cell. 
+All N^2 threads should be created in the beginning of the simulation 
+and deleted in the end - i.e. do not delete/create threads between 
+iterations. Use pre-C++11 POSIX threads - only basic mutex and 
+semaphore functionality (i.e. do NOT use built-in barriers).
+
+Read initial position from file:
+first pair of integers - X,Y dimensions
+each next pair of integers from range [0,X-1]x[0,Y-1]
+5 5 
+0 0 
+1 1 
+2 2 
+3 3 
+4 4 
+defines 5x5 envirionment with 5 live cells on the diagonal
++-----+
+|*    |
+| *   |
+|  *  |
+|   * |
+|    *|
++-----+
+
+you program should accept 3 arguments: 
+file with initial population
+number of iterations to calculate
+file to output the resulting population (same format as input)
+
+Part 2:
+Implement Game of Life on NxN using C threads.
+
+you program should accept 4 arguments: 
+the number of threads to use
+file with initial population
+number of iterations to calculate
+file to output the resulting population (same format as input)
+
+Part 3: report - as a comment at the top of main_part2.cpp
+explain your implementations part 2 - high level pseudo code for synchronizatin.
