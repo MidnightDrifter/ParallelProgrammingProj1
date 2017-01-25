@@ -21,6 +21,9 @@
     <ClCompile Include="..\main_part1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Cells.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\handout.txt">
@@ -58,6 +61,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\semaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cells.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

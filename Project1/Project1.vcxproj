@@ -122,6 +122,7 @@
   <ItemGroup>
     <ClCompile Include="..\draw.cpp" />
     <ClCompile Include="..\main_part1.cpp" />
+    <ClCompile Include="Cells.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\handout.txt" />
@@ -139,6 +140,7 @@
     <ClInclude Include="..\pthread.h" />
     <ClInclude Include="..\sched.h" />
     <ClInclude Include="..\semaphore.h" />
+    <ClInclude Include="Cells.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\libpthreadGC2.a" />
