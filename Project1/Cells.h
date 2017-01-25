@@ -5,10 +5,10 @@ public:
 
 	Cells(int r, int c);
 	~Cells();
-
-	void Update();
+	//Clls& operator=(const Cells& c);
+	//void Update();
 
 	int numRows, numCols;
-	bool[][] cellGrid;
+	bool** cellGrid;
 };
 

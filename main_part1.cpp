@@ -4,13 +4,54 @@
 #include "pthread.h" /* thread stuff */
 #include "sched.h"
 #include "semaphore.h"
-#include "Cells.h"
-
+#include "Project1\Cells.h"
+int rows, cols;
 struct threadData {
 
-
+	int myRow, myCol;
+	Cells* myGrid;
 
 };
+
+void* Update(void* data)
+{
+	//(int[2]) rowCol = (int[2]) data;
+	//threadData* myData;
+	threadData* myData = (threadData*)data;
+
+	int count = 0;
+	//STOP HERE TOO, everyone only goes when EVERYONE is done writing
+
+
+	for (int i = myData->myRow - 1; i <= myData->myRow + 1; i++)
+	{
+		for (int j = myData->myCol - 1; j <= myData->myCol + 1; j++)
+		{
+			if (!(myData->myRow == i && myData->myCol == j))
+			{//GAME OF LIFE RULES HERE
+				if (i < 0 || j < 0 || i >= rows || j >= cols)
+				{
+					//Do nothing, or treat as dead?
+				}
+				else if (!(myData->myGrid->cellGrid[i][j]))
+				{
+					count++;
+				}
+			}
+		}
+	}
+
+	//Everyone waits here until all threads arrive, THEN they update their grid data
+	if (count < 2 || count > 3)
+	{
+		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = false;
+	}
+	else if (count == 3)
+	{
+		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = true;
+	}
+
+}
 
 
 int main( int argc, char ** argv ) 
@@ -20,7 +61,8 @@ int main( int argc, char ** argv )
         return 1;
     }
     
-    int num_iter = 0;
+	int num_iter;
+	num_iter= 0;
     std::sscanf(argv[2],"%i",&num_iter);
 
     // input  file argv[1]
@@ -28,71 +70,34 @@ int main( int argc, char ** argv )
 
 	int rows, cols, a,b;
 
-	char* inputFile = "init0";
+	char* inputFile;
+	inputFile= "init0";
 	FILE* fp = fopen(inputFile,"r");
-	fscanf(inputFile, "%i, %i", &rows, &cols);
+	fscanf(fp, "%i, %i", &rows, &cols);
 
 	Cells grid(rows, cols);
 
 	while (!feof(fp))
 	{
-		fscanf(inputFile, "%i, %i", &a, &b);
+		fscanf(fp, "%i, %i", &a, &b);
 		grid.cellGrid[a][b] = true;
 	}
 
 
 	int numThreads = rows*cols;
 
-	void* Update(void* data)
-	{
-		(int[2]) rowCol = (int[2]) data;
-	
-		
-		int count = 0;
-		//STOP HERE TOO, everyone only goes when EVERYONE is done writing
 
-	
-		for (int i = rowCol[0] - 1; i <= rowCol[0] + 1; i++)
-		{
-			for (int j = rowCol[1] - 1; j <= rowCol[1] + 1; j++)
-			{
-				if (!(rowCol[0] == i && rowCol[1] == j))
-				{//GAME OF LIFE RULES HERE
-					if (i < 0 || j < 0 || i >= rows || j >= cols || )
-					{
-						//Do nothing, or treat as dead?
-					}
-					else if (!grid.cellGrid[i][j])
-					{
-						count++;
-					}
-				}
-			}
-		}
+	threadData* data = new threadData;
+	data->myGrid = &grid;
 
-		//Everyone waits here until all threads arrive, THEN they update their grid data
-		if (count < 2 || count > 3)
-		{
-			grid.cellGrid(rowCol[0], rowCol[1]) = false;
-		}
-		else if (count == 3)
-		{
-			grid.cellGrid(rowCol[0], rowCol[1]) = true;
-		}
-
-	}
-
-
-	int data[2] = { 0,0 };
-
-	pthread_t threads[][] = new pthread_t*[rows];
+	pthread_t **threads = new pthread_t*[rows];
 	for (int i = 0; i < rows; i++)
 	{
-		data[0] = i;
+		data->myRow = i;
 		threads[i] = new pthread_t[cols];
 		for (int j = 0; j < cols; j++)
 		{
-			data[1] = j;
+			data->myCol = j;
 			pthread_create(&threads[i][j], NULL, Update, (void*)data);
 		}
 	}
