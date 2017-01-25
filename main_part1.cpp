@@ -46,7 +46,12 @@ int main( int argc, char ** argv )
 	void* Update(void* data)
 	{
 		(int[2]) rowCol = (int[2]) data;
+	
+		
 		int count = 0;
+
+
+	
 		for (int i = rowCol[0] - 1; i <= rowCol[0] + 1; i++)
 		{
 			for (int j = rowCol[1] - 1; j <= rowCol[1] + 1; j++)
@@ -65,6 +70,7 @@ int main( int argc, char ** argv )
 			}
 		}
 
+		//Everyone waits here until all threads arrive, THEN they update their grid data
 		if (count < 2 || count > 3)
 		{
 			grid.cellGrid(rowCol[0], rowCol[1]) = false;
