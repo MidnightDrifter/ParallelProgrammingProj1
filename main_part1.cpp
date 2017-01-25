@@ -49,7 +49,7 @@ int main( int argc, char ** argv )
 	
 		
 		int count = 0;
-
+		//STOP HERE TOO, everyone only goes when EVERYONE is done writing
 
 	
 		for (int i = rowCol[0] - 1; i <= rowCol[0] + 1; i++)
