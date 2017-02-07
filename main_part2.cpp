@@ -1,6 +1,8 @@
 #include <fstream>   /* ifstream */
 #include <iostream> /*std::cout*/
 #include <cstdio>    /* sscanf */
+#include <string> //Memset
+#include <cstring>
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
@@ -213,14 +215,15 @@ int main( int argc, char ** argv )
     }
     
 	int num_iter, threadsToUse;
-	std::string outFilename;
+	char outFilename[100];
 	char inputFile[100];
 	memset(inputFile, 0, 100 * sizeof(char));
+	memset(outFilename, 0, 100 * sizeof(char));
 	num_iter= 0;
 	std::sscanf(argv[1], "%i", &threadsToUse);
 	std::sscanf(argv[2], "%s", inputFile);
     std::sscanf(argv[3],"%i",&num_iter);
-	std::sscanf(argv[4], "%s", &outFilename);
+	std::sscanf(argv[4], "%s", outFilename);
     // input  file argv[1]
     // output file argv[3]
 
@@ -256,8 +259,8 @@ int main( int argc, char ** argv )
 
 	data->r = &finishedReading;
 	data->w = &finishedWriting;
-	int threadsCreated = 0;
-	int threadsRemaining = numThreads;
+	//int threadsCreated = 0;
+	//int threadsRemaining = numThreads;
 
 	for (int iterations = 0; iterations < num_iter; iterations++)
 	{
@@ -270,6 +273,8 @@ int main( int argc, char ** argv )
 			}
 			for (int j = 0; j < cols; )
 			{
+				
+				/*
 				if(threadsRemaining < threadsToUse)
 				{
 					threadsCreated = threadsRemaining;
@@ -278,7 +283,7 @@ int main( int argc, char ** argv )
 				{
 					threadsCreated = threadsToUse;
 				}
-
+				*/
 
 				data->myCol = j;
 				data->gridParity = g;
@@ -299,7 +304,7 @@ int main( int argc, char ** argv )
 
 
 	std::ofstream out;
-	out.open(outFilename.c_str());
+	out.open(outFilename);
 	
 
 	for (int i = 0; i < rows; i++)
@@ -312,6 +317,6 @@ int main( int argc, char ** argv )
 			}
 		}
 	}
-
+	out.close();
 
 }

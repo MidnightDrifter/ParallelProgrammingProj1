@@ -1,6 +1,8 @@
 #include <fstream>   /* ifstream */
 #include <iostream> /*std::cout*/
 #include <cstdio>    /* sscanf */
+#include <string> //Memset
+#include <cstring>
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
@@ -170,13 +172,14 @@ int main( int argc, char ** argv )
     }
     
 	int num_iter;
-	std::string outFilename;
+	char outFilename[100];
 	char inputFile[100];
 	memset(inputFile, 0, 100 * sizeof(char));
+	memset(outFilename, 0, 100 * sizeof(char));
 	num_iter= 0;
 	std::sscanf(argv[1], "%s", inputFile);
     std::sscanf(argv[2],"%i",&num_iter);
-	std::sscanf(argv[3], "%s", &outFilename);
+	std::sscanf(argv[3], "%s", outFilename);
     // input  file argv[1]
     // output file argv[3]
 
@@ -236,7 +239,7 @@ int main( int argc, char ** argv )
 
 
 	std::ofstream out;
-	out.open(outFilename.c_str());
+	out.open(outFilename);
 	
 
 	for (int i = 0; i < rows; i++)
