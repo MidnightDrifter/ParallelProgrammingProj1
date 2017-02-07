@@ -7,6 +7,26 @@
 
 
 
+//Multiplexing pseudocode:  Identical to the previous code, but with an additional semaphore to limit reading and writing to only 5 cells at a time
+/*
+	Read Semaphore Wait
+	READ BOARD STATE
+	Read Semaphore Signal
+	Read Barrier
+	
+
+	Write Semaphore Wait
+	WRITE TO BOARD
+	Write Semaphore Signal
+	Write Barrier
+
+
+	Repeat
+
+
+
+*/
+
 class Cells
 {
 public:
@@ -23,7 +43,21 @@ public:
 			}
 		}
 	}
-
+	/*
+	const Cells& operator= (const Cells& other)
+	{
+		if (this != &other && (other.numCols == numCols && other.numRows == numRows))
+		{
+			for(int x = 0;x<numRows;x++)
+			{
+				for (int y = 0; y < numRows; y++)
+				{
+					cellGrid[x][y] = other.cellGrid[x][y];
+				}
+			}
+		}
+	}
+	*/
 	~Cells()
 	{
 		for (int i = 0; i < numRows; i++)
@@ -44,7 +78,6 @@ public:
 class ReusableBarrier
 {
 public:
-	ReusableBarrier()  {}
 	ReusableBarrier(int n) : n(n), count(0) { pthread_mutex_init(&mutex, NULL);  sem_init(&turnstile0, 0, 0);  sem_init(&turnstile1, 0, 0); }
 	~ReusableBarrier() { pthread_mutex_destroy(&mutex);  sem_destroy(&turnstile0); sem_destroy(&turnstile1); }
 
@@ -94,8 +127,7 @@ public:
 
 int rows, cols, numThreads;
 pthread_mutex_t mutex;// = new 
-sem_t readBarrier1, readBarrier2, writeBarrier1, writeBarrier2;
-
+sem_t readBarrier1, readBarrier2, writeBarrier1, writeBarrier2, multiplexingRead, multiplexingWrite;
 //sem_init(&readBarrier1, 0, 0);
 
 
@@ -104,8 +136,8 @@ sem_t readBarrier1, readBarrier2, writeBarrier1, writeBarrier2;
 int mutexCount=0;
 struct threadData {
 
-	int myRow, myCol;
-	Cells* myGrid;
+	int myRow, myCol, gridParity;
+	Cells* myGrid, *otherGrid;
 	ReusableBarrier* r, *w;
 
 };
@@ -117,6 +149,7 @@ void* Update(void* data)
 	threadData* myData = static_cast<threadData*>(data);
 	
 	int count = 0;
+	
 	//STOP HERE TOO, everyone only goes when EVERYONE is done writing
 	//Rendezvous point 1 ?
 	//pthread_mutex_lock(&mutex);
@@ -126,9 +159,11 @@ void* Update(void* data)
 	//{
 	//	
 	//}
-
+	sem_wait(&multiplexingRead);
 
 	//pthread_mutex_unlock(&mutex);
+
+
 
 	for (int i = myData->myRow - 1; i <= myData->myRow + 1; i++)
 	{
@@ -147,7 +182,12 @@ void* Update(void* data)
 			}
 		}
 	}
+	sem_post(&multiplexingRead);
 	myData->r->wait();
+	//barrier
+
+
+	sem_wait(&multiplexingWrite);
 	//Everyone waits here until all threads arrive, THEN they update their grid data
 	if (count < 2 || count > 3)
 	{
@@ -157,6 +197,9 @@ void* Update(void* data)
 	{
 		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = true;
 	}
+
+
+	sem_post(&multiplexingWrite);
 	myData->w->wait();
 	return 0;
 }
@@ -169,45 +212,52 @@ int main( int argc, char ** argv )
         return 1;
     }
     
-	int num_iter;
+	int num_iter, threadsToUse;
 	std::string outFilename;
 	char inputFile[100];
 	memset(inputFile, 0, 100 * sizeof(char));
 	num_iter= 0;
-	std::sscanf(argv[1], "%s", inputFile);
-    std::sscanf(argv[2],"%i",&num_iter);
-	std::sscanf(argv[3], "%s", &outFilename);
+	std::sscanf(argv[1], "%i", &threadsToUse);
+	std::sscanf(argv[2], "%s", inputFile);
+    std::sscanf(argv[3],"%i",&num_iter);
+	std::sscanf(argv[4], "%s", &outFilename);
     // input  file argv[1]
     // output file argv[3]
 
 	int rows, cols, a,b;
-	int trash;
+	sem_init(&multiplexingRead, 0, threadsToUse);
+	sem_init(&multiplexingWrite, 0, threadsToUse);
 	//char* inputFile;
 	//inputFile= "init0";
+	int trash;
+
 	FILE* fp = fopen(inputFile,"r");
 	trash = fscanf(fp, "%i, %i", &rows, &cols);
 
 	Cells grid(rows, cols);
-
+	
 	while (!feof(fp))
 	{
-		trash = fscanf(fp, "%i, %i", &a, &b);
+	trash =	fscanf(fp, "%i, %i", &a, &b);
 		grid.cellGrid[a][b] = true;
 	}
 	trash++;
 	fclose(fp);
 	 numThreads = rows*cols;
 	mutexCount = numThreads;
-	ReusableBarrier finishedReading = ReusableBarrier(numThreads);
-	 ReusableBarrier finishedWriting = ReusableBarrier(numThreads);
+	ReusableBarrier finishedReading(numThreads);
+	ReusableBarrier finishedWriting(numThreads);
 
 	threadData* data = new threadData;
 	data->myGrid = &grid;
+	int g = 0;
 
 	pthread_t **threads = new pthread_t*[rows];
 
 	data->r = &finishedReading;
 	data->w = &finishedWriting;
+	int threadsCreated = 0;
+	int threadsRemaining = numThreads;
 
 	for (int iterations = 0; iterations < num_iter; iterations++)
 	{
@@ -218,10 +268,23 @@ int main( int argc, char ** argv )
 			{
 				threads[i] = new pthread_t[cols];
 			}
-			for (int j = 0; j < cols; j++)
+			for (int j = 0; j < cols; )
 			{
+				if(threadsRemaining < threadsToUse)
+				{
+					threadsCreated = threadsRemaining;
+				}
+				else
+				{
+					threadsCreated = threadsToUse;
+				}
+
+
 				data->myCol = j;
+				data->gridParity = g;
 				pthread_create(&threads[i][j], NULL, Update, static_cast<void*>(data));
+				g = (g + 1) % 2;
+
 			}
 		}
 	}

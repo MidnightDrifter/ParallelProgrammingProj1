@@ -122,6 +122,7 @@
   <ItemGroup>
     <ClCompile Include="..\draw.cpp" />
     <ClCompile Include="..\main_part1.cpp" />
+    <ClCompile Include="..\main_part2.cpp" />
     <ClCompile Include="Cells.cpp" />
   </ItemGroup>
   <ItemGroup>
