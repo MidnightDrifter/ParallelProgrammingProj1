@@ -3,10 +3,24 @@
 #include <cstdio>    /* sscanf */
 #include <string> //Memset
 #include <cstring>
+
+
+#ifdef _MSC_VER
+#include "pthread.h"
+#include "sched.h"
+#include "semaphore.h"
+
+#else 
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
+#endif
 
+/*
+#include <pthread.h>
+#include <sched.h>
+#include <semaphore.h>
+*/
 
 
 //Multiplexing pseudocode:  Identical to the previous code, but with an additional semaphore to limit reading and writing to only 5 cells at a time
@@ -29,50 +43,66 @@
 
 */
 
+class Cells;
+class ReusableBarrier;
+
+struct threadData {
+
+	int myRow, myCol, iterations;
+	Cells* myGrid, *otherGrid;
+	ReusableBarrier* r, *w;
+
+};
+
 class Cells
 {
 public:
 
+	int numRows, numCols;
+	bool** cellGrid;
+	threadData*** dataGrid;
+
+
+
 	Cells(int r, int c) : numRows(r), numCols(c)
 	{
 		cellGrid = new bool*[r];
+		dataGrid = new threadData**[r];
 		for (int i = 0; i < r; i++)
 		{
 			cellGrid[i] = new bool[c];
+			dataGrid[i] = new threadData*[c];
 			for (int j = 0; j < c; j++)
 			{
 				cellGrid[i][j] = false;
+				dataGrid[i][j] = new threadData;
+				dataGrid[i][j]->myRow = i;
+				dataGrid[i][j]->myCol = j;
+				dataGrid[i][j]->myGrid = this;
+				dataGrid[i][j]->r = NULL;
+				dataGrid[i][j]->w = NULL;
+
 			}
 		}
 	}
-	/*
-	const Cells& operator= (const Cells& other)
-	{
-		if (this != &other && (other.numCols == numCols && other.numRows == numRows))
-		{
-			for(int x = 0;x<numRows;x++)
-			{
-				for (int y = 0; y < numRows; y++)
-				{
-					cellGrid[x][y] = other.cellGrid[x][y];
-				}
-			}
-		}
-	}
-	*/
+
 	~Cells()
 	{
 		for (int i = 0; i < numRows; i++)
 		{
 			delete[] cellGrid[i];
+			for (int j = 0; j < numCols; j++)
+			{
+				delete dataGrid[i][j];
+			}
+			delete[] dataGrid[i];
 		}
 		delete[] cellGrid;
+		delete[] dataGrid;
 	}
 	//Clls& operator=(const Cells& c);
 	//void Update();
 
-	int numRows, numCols;
-	bool** cellGrid;
 };
 
 //Implementing the Barrier class in the Lil' Book of Semaphores in C++
@@ -136,13 +166,7 @@ sem_t readBarrier1, readBarrier2, writeBarrier1, writeBarrier2, multiplexingRead
 
 
 int mutexCount=0;
-struct threadData {
 
-	int myRow, myCol, gridParity;
-	Cells* myGrid, *otherGrid;
-	ReusableBarrier* r, *w;
-
-};
 
 void* Update(void* data)
 {
@@ -150,7 +174,9 @@ void* Update(void* data)
 	//threadData* myData;
 	threadData* myData = static_cast<threadData*>(data);
 	
-	int count = 0;
+	int count;
+	for(int x=0;x<myData->iterations;x++)
+   { count = 0;
 	
 	//STOP HERE TOO, everyone only goes when EVERYONE is done writing
 	//Rendezvous point 1 ?
@@ -177,7 +203,7 @@ void* Update(void* data)
 				{
 					//Do nothing, or treat as dead?
 				}
-				else if (!(myData->myGrid->cellGrid[i][j]))
+				else if ((myData->myGrid->cellGrid[i][j]))
 				{
 					count++;
 				}
@@ -191,18 +217,33 @@ void* Update(void* data)
 
 	sem_wait(&multiplexingWrite);
 	//Everyone waits here until all threads arrive, THEN they update their grid data
-	if (count < 2 || count > 3)
+
+
+if (myData->myGrid->cellGrid[myData->myRow][myData->myCol])
+{
+	if (count < 2 || count>3)
 	{
 		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = false;
 	}
-	else if (count == 3)
+	else
 	{
 		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = true;
 	}
+}
+
+else
+{
+	if (count == 3)
+	{
+		myData->myGrid->cellGrid[myData->myRow][myData->myCol] = true;
+	}
+}
+
 
 
 	sem_post(&multiplexingWrite);
 	myData->w->wait();
+	}
 	return 0;
 }
 
@@ -227,7 +268,7 @@ int main( int argc, char ** argv )
     // input  file argv[1]
     // output file argv[3]
 
-	int rows, cols, a,b;
+	int  a,b;
 	sem_init(&multiplexingRead, 0, threadsToUse);
 	sem_init(&multiplexingWrite, 0, threadsToUse);
 	//char* inputFile;
@@ -235,13 +276,13 @@ int main( int argc, char ** argv )
 	int trash;
 
 	FILE* fp = fopen(inputFile,"r");
-	trash = fscanf(fp, "%i, %i", &rows, &cols);
+	trash = fscanf(fp, "%i %i", &rows, &cols);
 
 	Cells grid(rows, cols);
 	
 	while (!feof(fp))
 	{
-	trash =	fscanf(fp, "%i, %i", &a, &b);
+	trash =	fscanf(fp, "%i %i", &a, &b);
 		grid.cellGrid[a][b] = true;
 	}
 	trash++;
@@ -253,59 +294,54 @@ int main( int argc, char ** argv )
 
 	threadData* data = new threadData;
 	data->myGrid = &grid;
-	int g = 0;
+	//int g = 0;
 
 	pthread_t **threads = new pthread_t*[rows];
 
 	data->r = &finishedReading;
 	data->w = &finishedWriting;
-	//int threadsCreated = 0;
-	//int threadsRemaining = numThreads;
-
-	for (int iterations = 0; iterations < num_iter; iterations++)
+for (int i = 0; i<rows; i++)
+{
+	for (int j = 0; j < cols; j++)
 	{
-		for (int i = 0; i < rows; i++)
-		{
-			data->myRow = i;
-			if (iterations == 0)
-			{
-				threads[i] = new pthread_t[cols];
-			}
-			for (int j = 0; j < cols; )
-			{
-				
-				/*
-				if(threadsRemaining < threadsToUse)
-				{
-					threadsCreated = threadsRemaining;
-				}
-				else
-				{
-					threadsCreated = threadsToUse;
-				}
-				*/
-
-				data->myCol = j;
-				data->gridParity = g;
-				pthread_create(&threads[i][j], NULL, Update, static_cast<void*>(data));
-				g = (g + 1) % 2;
-
-			}
-		}
+		grid.dataGrid[i][j]->r = &finishedReading;
+		grid.dataGrid[i][j]->w = &finishedWriting;
+		grid.dataGrid[i][j]->iterations = num_iter;
 	}
+}
 
-	for(int i=0;i<rows;i++)
+
+
+	for (int i = 0; i < rows; i++)
 	{
+		//data->myRow = i;
+		
+			threads[i] = new pthread_t[cols];
+		
 		for (int j = 0; j < cols; j++)
 		{
-			pthread_join(threads[i][j], NULL);
+			//	data->myCol = j;
+			pthread_create(&threads[i][j], NULL, Update, static_cast<void*>(grid.dataGrid[i][j]));
+
 		}
 	}
+
+
+for (int i = 0; i<rows; i++)
+{
+	for (int j = 0; j < cols; j++)
+	{
+		pthread_join(threads[i][j], NULL);
+	}
+}
+
 
 
 	std::ofstream out;
-	out.open(outFilename);
+	out.open(outFilename, std::fstream::out);
 	
+
+	out << rows << " " << cols << std::endl;
 
 	for (int i = 0; i < rows; i++)
 	{
@@ -313,10 +349,10 @@ int main( int argc, char ** argv )
 		{
 			if (grid.cellGrid[i][j])
 			{
-				out << i << ", " << j << std::endl;
+				out << i << " " << j << std::endl;
 			}
 		}
 	}
 	out.close();
-
+  return 0;
 }

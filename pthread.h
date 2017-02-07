@@ -313,6 +313,23 @@ enum {
 #endif
 #endif
 
+
+#if !defined(HAVE_STRUCT_TIMESPEC)
+#define HAVE_STRUCT_TIMESPEC
+ #if !defined(_TIMESPEC_DEFINED)
+#define _TIMESPEC_DEFINED
+ #if !defined(_INC_TIME)
+ struct timespec {
+	        time_t tv_sec;
+	        long tv_nsec;
+	
+};
+ #endif /* _INC_TIME */
+ #endif /* _TIMESPEC_DEFINED */
+ #endif /* HAVE_STRUCT_TIMESPEC */
+
+
+/*
 #if !defined(HAVE_STRUCT_TIMESPEC)
 #define HAVE_STRUCT_TIMESPEC
 #if !defined(_TIMESPEC_DEFINED)
@@ -321,7 +338,7 @@ struct timespec {
         time_t tv_sec;
         long tv_nsec;
 };
-#endif /* _TIMESPEC_DEFINED */
+#endif /* _TIMESPEC_DEFINED 
 #endif /* HAVE_STRUCT_TIMESPEC */
 
 #if !defined(SIG_BLOCK)
